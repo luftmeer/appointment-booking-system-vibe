@@ -14,7 +14,7 @@ ALLOWED_HOSTS = [
     if host
 ]
 
-INSTALLED_APPS = []
+INSTALLED_APPS = ["apps.common"]
 MIDDLEWARE = []
 ROOT_URLCONF = "config.urls"
 TEMPLATES = []

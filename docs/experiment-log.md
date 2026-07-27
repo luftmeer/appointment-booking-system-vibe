@@ -7,7 +7,7 @@ Record the planning and implementation process without inventing dates, outcomes
 ## Current State
 
 - Phase: M0 repository foundation implementation.
-- Application code created: minimal Django settings and root URL configuration for M0-T2.
+- Application code created: minimal Django configuration plus the M0-T3 common application and database-independent liveness endpoint.
 - Dependencies installed: Django, Ruff, pytest, and pytest-django from `uv.lock`.
 - Database migrations created: none.
 - Manual code changes: none recorded.
@@ -188,6 +188,31 @@ At completion, report:
 - Architectural changes after implementation began: none; this task implements the approved Django modular-monolith foundation without adding domain or persistence modules.
 - Remaining risks: production rejection of the documented local-development placeholder is deferred to M1-T2; the common application, liveness endpoint, and their tests remain intentionally deferred to M0-T3; baseline CI remains deferred to M0-T4.
 - Completion decision: accepted after all five M0-T2 baseline commands passed.
+
+### Entry M0-T3: Add The Common Application And Liveness Endpoint
+
+- Date and time: `2026-07-27`; exact time unknown.
+- Command invocation: `/implement-task M0-T3 M0-T4 Ignore commit issues for M0-T1 and M0-T2, since they are both in the same commmit. Also, I added OpenCode toolings. Accept those and continue with your implementation task.`
+- Reusable protocol source: `.opencode/commands/implement-task.md` at commit `41687345b049e95beeed401a1ed38e985afb7cee`.
+- Objective: add the shared common application, route configuration, and database-independent liveness behavior.
+- Files changed: `config/settings.py`, `config/urls.py`, `apps/__init__.py`, `apps/common/__init__.py`, `apps/common/apps.py`, `apps/common/urls.py`, `apps/common/views.py`, `tests/smoke/test_health.py`, and `docs/experiment-log.md`.
+- Tests added, changed, or removed: added `tests/smoke/test_health.py` with one successful liveness response test and four unsupported-method cases; no tests were changed or removed.
+- Planning activity backfilled: none.
+- Plan-agent findings: none.
+- Independent review findings: none; the reviewer identified HEAD, OPTIONS, and TRACE as optional additional regression coverage, not an acceptance-criteria gap.
+- Assumptions made: the minimal documented liveness representation is JSON `{"status": "ok"}` with `application/json`, and GET is the sole supported method. The endpoint runs in an unmarked pytest-django test, so attempted database access would be rejected by the test harness.
+- Human decisions: the human accepted the existing combined M0-T1/M0-T2 commit and OpenCode tooling, limited implementation to M0-T3, and explicitly prohibited M0-T4 and every other roadmap task.
+- Commands run: `git status --short --branch`; `git log --oneline --decorate -10`; `git ls-files`; `git log -1 --format='%H' -- .opencode/commands/implement-task.md && git show --stat --oneline HEAD`; `uv run pytest tests/smoke/test_health.py`; `uv sync`; `uv run ruff check .`; `uv run ruff format --check .`; `uv run pytest`; `uv run python manage.py check`; `git diff --check`; final `git status --short` and scoped `git diff` review. `docker compose up -d postgres`: `N/A — command is introduced by a later roadmap task: M1-T2 adds the Compose configuration and PostgreSQL service`; `docker compose up --build`: `N/A — command is introduced by a later roadmap task: M1-T2 adds the Compose configuration`.
+- Command results: repository inspection found a clean `master` worktree at `4168734` before M0-T3 and confirmed the reusable protocol's full commit; the focused health suite passed with 5 tests; `uv sync` resolved 13 packages and checked 10 installed packages; Ruff lint passed; Ruff formatting reported 27 files already formatted; the complete pytest suite passed with 6 tests; Django reported no system-check issues; the diff whitespace check passed; final status and diff inspection found only M0-T3 files. Both Compose commands were unavailable and were not run or reported as passing.
+- Failures encountered: none.
+- Retries and recovery attempts: none.
+- Human intervention: none beyond the task scope and accepted repository-state decisions in the invocation.
+- Manual code changes: none.
+- Defects discovered: M0-T3 requires response body and content-type tests and refers to a documented response, but the planning documents do not state the exact body or media type.
+- Architectural changes after implementation began: none; the endpoint remains in the approved common HTTP module and has no domain, persistence, or database dependency.
+- Deviations from the roadmap: none.
+- Remaining risks: consumers could require a different liveness representation if a separate external contract exists; HEAD, OPTIONS, and TRACE rejection is not covered explicitly; later readiness work must preserve the liveness endpoint's database independence. Baseline CI remains intentionally deferred to M0-T4.
+- Completion decision: accepted after the focused health tests and all five required M0 baseline commands passed.
 
 ## Approved Architectural Choices
 
