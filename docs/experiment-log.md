@@ -6,12 +6,12 @@ Record the planning and implementation process without inventing dates, outcomes
 
 ## Current State
 
-- Phase: M0 repository foundation implementation.
+- Phase: M0 repository foundation complete.
 - Application code created: minimal Django configuration plus the M0-T3 common application and database-independent liveness endpoint.
 - Dependencies installed: Django, Ruff, pytest, and pytest-django from `uv.lock`.
 - CI created: M0-T4 baseline GitHub Actions workflow for locked Python installation, Django checks, Ruff, and pytest.
 - Database migrations created: none.
-- Manual code changes: none recorded.
+- Manual code changes: the human added the OpenCode tooling recorded in commit `41687345b049e95beeed401a1ed38e985afb7cee`; see the M0 traceability correction below.
 
 ## Planning History
 
@@ -183,8 +183,8 @@ At completion, report:
 - Commands run: `uv sync`; `uv run ruff check .`; `uv run ruff format --check .`; `uv run pytest`; `uv run python manage.py check`. `docker compose up -d postgres`: `N/A — compose configuration is introduced by M1-T2`; `docker compose up --build`: `N/A — compose configuration is introduced by M1-T2`.
 - Command results: `uv sync` passed using CPython 3.12.13 and installed 10 locked packages; Ruff lint passed; Ruff formatting check passed; pytest passed with 1 test; Django reported no system-check issues. Both Docker Compose commands were unavailable and were not run or reported as passing.
 - Failed attempts: none.
-- Human intervention: none beyond the task scope supplied in the prompt.
-- Manual code changes: none.
+- Human intervention: beyond the M0-T2 task scope, the human added the OpenCode tooling committed alongside M0-T2 in `41687345b049e95beeed401a1ed38e985afb7cee`. The tooling was not part of the M0-T2 roadmap implementation and was explicitly accepted by the human before M0-T3 continued.
+- Manual code changes: the human added `.opencode/agents/adversarial-tester.md`, `.opencode/agents/refactor.md`, `.opencode/agents/refactoring-advisor.md`, `.opencode/agents/test-implementer.md`, and `.opencode/commands/implement-task.md` in commit `41687345b049e95beeed401a1ed38e985afb7cee`.
 - Defects found after completion: none.
 - Architectural changes after implementation began: none; this task implements the approved Django modular-monolith foundation without adding domain or persistence modules.
 - Remaining risks: production rejection of the documented local-development placeholder is deferred to M1-T2; the common application, liveness endpoint, and their tests remain intentionally deferred to M0-T3; baseline CI remains deferred to M0-T4.
@@ -208,7 +208,7 @@ At completion, report:
 - Failures encountered: none.
 - Retries and recovery attempts: none.
 - Human intervention: none beyond the task scope and accepted repository-state decisions in the invocation.
-- Manual code changes: none.
+- Manual code changes: none during M0-T3; the human-confirmed OpenCode additions already existed in commit `41687345b049e95beeed401a1ed38e985afb7cee` and were accepted as repository state in the M0-T3 invocation.
 - Defects discovered: M0-T3 requires response body and content-type tests and refers to a documented response, but the planning documents do not state the exact body or media type.
 - Architectural changes after implementation began: none; the endpoint remains in the approved common HTTP module and has no domain, persistence, or database dependency.
 - Deviations from the roadmap: none.
@@ -241,6 +241,32 @@ At completion, report:
 - Remaining risks: GitHub-hosted runner behavior is not independently verified until the workflow is committed and pushed; local `act` optimizes the checkout step by copying the source, so the pinned checkout action was verified by immutable reference and inspection rather than executed; later M1 and M2 tasks must extend this workflow with PostgreSQL, migrations, frontend, and browser checks without weakening the baseline.
 - Completion decision: blocked pending an authorized commit and a green GitHub-hosted push or pull-request run from that commit; workflow validation, fresh-container execution, and all five required local M0 commands passed.
 
+#### M0-T4 Hosted Completion Addendum
+
+- Date and time: hosted run started `2026-07-27T20:54:57Z` and completed successfully by `2026-07-27T20:55:15Z`.
+- Human intervention: the human confirmed creating and pushing M0-T4 commit `3bfde5f7c0ea4ff263769330cadb5239e5b2cae8` after the original blocked decision.
+- Remote state: `origin` is `git@github.com:luftmeer/appointment-booking-system-vibe.git`; local `main`, `origin/main`, and `origin/HEAD` resolved to M0-T4 commit `3bfde5f7c0ea4ff263769330cadb5239e5b2cae8` when the completion evidence was reviewed.
+- Hosted CI evidence: push-triggered GitHub Actions run [`30304622905`](https://github.com/luftmeer/appointment-booking-system-vibe/actions/runs/30304622905), attempt 1, completed with conclusion `success` for exact commit `3bfde5f7c0ea4ff263769330cadb5239e5b2cae8`.
+- Hosted job evidence: Python job [`90105692448`](https://github.com/luftmeer/appointment-booking-system-vibe/actions/runs/30304622905/job/90105692448) completed with conclusion `success` on `ubuntu-24.04`; checkout, uv installation, locked dependency installation, Django checks, Ruff lint, Ruff formatting, and pytest all succeeded.
+- Blocker resolution: the hosted run executed the pinned checkout action and every required M0 gate from the pushed commit, resolving the clean-checkout evidence blocker while preserving the original blocked decision above as historical state.
+- Completion decision: M0-T4 accepted and M0 complete after the successful hosted clean-checkout run and the previously recorded local verification results.
+
+### M0 Traceability Correction
+
+- Date and time: `2026-07-27`; exact correction time unknown.
+- Human confirmation: the human confirmed adding the OpenCode tooling included in commit `41687345b049e95beeed401a1ed38e985afb7cee` and creating and pushing M0-T4 commit `3bfde5f7c0ea4ff263769330cadb5239e5b2cae8`.
+- Historical correction: the five `.opencode/` files listed in the M0-T2 entry were human manual changes committed alongside, but not implemented as part of, M0-T2. Their omission from the manual-change record was identified by independent review and is corrected without rewriting Git history or attributing them to the M0-T2 implementation.
+- M0-T4 correction: the original blocked decision remains above; the hosted completion addendum records the later commit, push, configured remote, successful run, and successful job that resolved it.
+- Files changed by this correction: `docs/experiment-log.md` only.
+- Tests added, changed, or removed: none; this is a traceability-only correction.
+- Commands run: `git status --short --branch`; `git log --oneline --decorate -10`; `git remote -v`; commit file inspection for `41687345b049e95beeed401a1ed38e985afb7cee` and `3bfde5f7c0ea4ff263769330cadb5239e5b2cae8`; GitHub Actions API inspection for run `30304622905` and job `90105692448`; `uv sync`; `uv run ruff check .`; `uv run ruff format --check .`; `uv run pytest`; `uv run python manage.py check`; `git diff --check` and scoped diff review.
+- Command results: the initial worktree was clean with local `main`, `origin/main`, and `origin/HEAD` at `3bfde5f7c0ea4ff263769330cadb5239e5b2cae8`; commit inspection confirmed the five OpenCode files and M0-T4 provenance; GitHub reported the run and job successful; `uv sync` resolved 13 packages and checked 10 installed packages; Ruff lint passed; Ruff formatting reported 27 files already formatted; all 6 tests passed; Django reported no system-check issues; the diff check passed and only `docs/experiment-log.md` changed.
+- Failures encountered: the initial documentation commit attempt failed before creating a commit because configured GPG signing launched an interactive curses pinentry without an available TTY.
+- Retries and recovery attempts: retry the commit with signing disabled for that command only; repository Git configuration remains unchanged and commit hooks remain enabled.
+- Architectural changes: none.
+- Roadmap deviations: none introduced by this correction.
+- Remaining M0 blockers: none.
+
 ## Approved Architectural Choices
 
 - Integrated Django modular monolith.
@@ -268,10 +294,16 @@ At completion, report:
 - Approved the review corrections.
 - Chose password-based local PostgreSQL development defaults rather than trust authentication.
 - Required a stable Django development secret across container restarts rather than per-restart generation.
+- Manually added the five OpenCode tooling files included in commit `41687345b049e95beeed401a1ed38e985afb7cee` and later explicitly accepted them as repository state.
+- Created and pushed M0-T4 commit `3bfde5f7c0ea4ff263769330cadb5239e5b2cae8`, enabling successful hosted CI run `30304622905`.
 
 ## Manual Code Changes
 
-None.
+- `.opencode/agents/adversarial-tester.md`, added by the human in commit `41687345b049e95beeed401a1ed38e985afb7cee`.
+- `.opencode/agents/refactor.md`, added by the human in commit `41687345b049e95beeed401a1ed38e985afb7cee`.
+- `.opencode/agents/refactoring-advisor.md`, added by the human in commit `41687345b049e95beeed401a1ed38e985afb7cee`.
+- `.opencode/agents/test-implementer.md`, added by the human in commit `41687345b049e95beeed401a1ed38e985afb7cee`.
+- `.opencode/commands/implement-task.md`, added by the human in commit `41687345b049e95beeed401a1ed38e985afb7cee`.
 
 ## Defects Found After Agent Completion
 
@@ -285,6 +317,8 @@ None.
 - Local Compose secrets conflicted with one-command startup until development placeholders and production rejection were decided.
 - Several tasks were too broad for one reviewable change.
 - Database readiness did not explicitly preserve the persistence boundary.
+- M0 task entries initially omitted the human provenance of the OpenCode tooling committed in `41687345b049e95beeed401a1ed38e985afb7cee`; the M0 traceability correction records it.
+- M0-T4 initially lacked a hosted clean-checkout run and remained blocked until the human pushed commit `3bfde5f7c0ea4ff263769330cadb5239e5b2cae8` and GitHub Actions run `30304622905` passed.
 
 ## Architectural Changes Made After Implementation Began
 
