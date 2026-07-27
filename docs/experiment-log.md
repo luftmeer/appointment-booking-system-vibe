@@ -9,6 +9,7 @@ Record the planning and implementation process without inventing dates, outcomes
 - Phase: M0 repository foundation implementation.
 - Application code created: minimal Django configuration plus the M0-T3 common application and database-independent liveness endpoint.
 - Dependencies installed: Django, Ruff, pytest, and pytest-django from `uv.lock`.
+- CI created: M0-T4 baseline GitHub Actions workflow for locked Python installation, Django checks, Ruff, and pytest.
 - Database migrations created: none.
 - Manual code changes: none recorded.
 
@@ -213,6 +214,32 @@ At completion, report:
 - Deviations from the roadmap: none.
 - Remaining risks: consumers could require a different liveness representation if a separate external contract exists; HEAD, OPTIONS, and TRACE rejection is not covered explicitly; later readiness work must preserve the liveness endpoint's database independence. Baseline CI remains intentionally deferred to M0-T4.
 - Completion decision: accepted after the focused health tests and all five required M0 baseline commands passed.
+
+### Entry M0-T4: Add Baseline Python CI
+
+- Date and time: `2026-07-27`; exact time unknown.
+- Command invocation: `/implement-task M0-T4 M1-T1`.
+- Reusable protocol source: `.opencode/commands/implement-task.md` at commit `41687345b049e95beeed401a1ed38e985afb7cee`.
+- Objective: verify M0 and later tasks through a clean-checkout Python CI baseline.
+- Files changed: `.github/workflows/ci.yml` and `docs/experiment-log.md`.
+- Tests added, changed, or removed: none; the workflow executes the complete existing six-test M0 smoke suite.
+- Dependency and action rationale: no project dependency was added. `actions/checkout` v7.0.1 materializes the source and is pinned to commit `3d3c42e5aac5ba805825da76410c181273ba90b1`; credential persistence is disabled. `astral-sh/setup-uv` v9.0.0 installs the approved package manager and is pinned to commit `c771a70e6277c0a99b617c7a806ffedaca235ff9`; uv itself is pinned to `0.11.32`, Python is constrained to the approved 3.12 minor version, and caching is disabled so the baseline does not rely on hidden cache state. Both action versions and commits were verified against their official GitHub release and tag metadata.
+- Planning activity backfilled: none.
+- Plan-agent findings: none.
+- Independent review findings: the workflow implementation, pinning, failure gates, security permissions, scope, and local command evidence passed review; the reviewer classified the missing GitHub-hosted clean-checkout run as a blocking completion-evidence gap.
+- Assumptions made: the hosted `ubuntu-24.04` runner supports the pinned Node 24 actions. The initial assumption that a fresh-container `act` run could satisfy the clean-checkout evidence was rejected by independent review because `act` copied the uncommitted worktree and skipped `actions/checkout`.
+- Human decisions: the human limited implementation to M0-T4, prohibited M1-T1 and every other roadmap task, and prohibited committing or pushing without a separate instruction.
+- Commands run: `git status --short --branch`; `git log --oneline --decorate -10`; repository file searches; `command -v act`, `command -v gh`, `command -v docker`, `git remote -v`, `uv --version`, and protocol commit inspection; `act --version`; `docker info --format '{{.ServerVersion}}'`; strict `act` validation, workflow listing, and dry run; `act push -j python -W .github/workflows/ci.yml -P ubuntu-24.04=ghcr.io/catthehacker/ubuntu:act-latest --container-architecture linux/amd64`; `uv sync`; `uv run pytest tests/smoke`; `uv run ruff check .`; `uv run ruff format --check .`; `uv run pytest`; `uv run python manage.py check`. `docker compose up -d postgres`: `N/A — command is introduced by a later roadmap task: M1-T2 adds the Compose configuration and PostgreSQL service`; `docker compose up --build`: `N/A — command is introduced by a later roadmap task: M1-T2 adds the Compose configuration`.
+- Command results: the worktree was initially clean at M0-T3 commit `00ebb25`; `act` 0.2.89 and Docker 29.6.2 were available, while `gh` and a Git remote were absent; strict workflow validation passed and listed one Python job for push and pull-request events; the dry run resolved every step; the fresh Linux container installed uv 0.11.32 and 10 locked packages, passed Django checks, Ruff lint, Ruff formatting for 27 Python files, and all 6 tests, and reported `Job succeeded`; local `uv sync` resolved 13 packages and checked 10 installed packages; the focused smoke suite and complete suite each passed 6 tests; local Ruff lint passed, Ruff formatting reported 27 files already formatted, and Django reported no system-check issues. Both Compose commands were unavailable and were not run or reported as passing.
+- Failures encountered: independent review found that the required green clean-checkout GitHub Actions evidence is unavailable while the workflow is uncommitted and the repository has no remote; the local `act` execution does not satisfy that completion gate.
+- Retries and recovery attempts: strict workflow validation, dry-run validation, and a fresh-container `act` execution all passed but could not verify hosted checkout behavior. No further recovery is possible without authorization to commit and push to a GitHub remote.
+- Human intervention: none beyond the task constraints in the invocation.
+- Manual code changes: none during M0-T4.
+- Defects discovered: no workflow implementation defect was found. Independent review identified the missing hosted clean-checkout run as a completion-evidence blocker. A prior review's OpenCode-tooling traceability discrepancy remains pre-existing and was not rewritten as part of this task.
+- Architectural changes after implementation began: none; this task implements the already approved incremental GitHub Actions baseline.
+- Deviations from the roadmap: a GitHub-hosted run was unavailable because the repository has no remote and the workflow cannot be committed or pushed under the task constraints; the same workflow job was instead executed successfully in a fresh Linux container with `act`.
+- Remaining risks: GitHub-hosted runner behavior is not independently verified until the workflow is committed and pushed; local `act` optimizes the checkout step by copying the source, so the pinned checkout action was verified by immutable reference and inspection rather than executed; later M1 and M2 tasks must extend this workflow with PostgreSQL, migrations, frontend, and browser checks without weakening the baseline.
+- Completion decision: blocked pending an authorized commit and a green GitHub-hosted push or pull-request run from that commit; workflow validation, fresh-container execution, and all five required local M0 commands passed.
 
 ## Approved Architectural Choices
 
