@@ -6,10 +6,11 @@ Record the planning and implementation process without inventing dates, outcomes
 
 ## Current State
 
-- Phase: M0 repository foundation complete.
+- Phase: M1 Docker and PostgreSQL development environment implementation.
 - Application code created: minimal Django configuration plus the M0-T3 common application and database-independent liveness endpoint.
 - Dependencies installed: Django, Ruff, pytest, and pytest-django from `uv.lock`.
 - CI created: M0-T4 baseline GitHub Actions workflow for locked Python installation, Django checks, Ruff, and pytest.
+- Container image created: M1-T1 reproducible non-root Django web image.
 - Database migrations created: none.
 - Manual code changes: the human added the OpenCode tooling recorded in commit `41687345b049e95beeed401a1ed38e985afb7cee`; see the M0 traceability correction below.
 
@@ -266,6 +267,31 @@ At completion, report:
 - Architectural changes: none.
 - Roadmap deviations: none introduced by this correction.
 - Remaining M0 blockers: none.
+
+### Entry M1-T1: Build The Web Container
+
+- Date and time: `2026-07-28`; exact time unknown.
+- Command invocation: `/implement-task M1-T1 M1-T2`.
+- Reusable protocol source: `.opencode/commands/implement-task.md` at commit `41687345b049e95beeed401a1ed38e985afb7cee`.
+- Objective: package the locked Django application in a reproducible container.
+- Files changed: `Dockerfile`, `.dockerignore`, and `docs/experiment-log.md`.
+- Tests added, changed, or removed: none; the required image-build and process-user behavior was exercised with Docker smoke commands, and the existing six-test suite was executed unchanged.
+- Base-image and tool rationale: the final image uses official `python:3.12.13-slim-bookworm` pinned to multi-platform index digest `sha256:d50fb7611f86d04a3b0471b46d7557818d88983fc3136726336b2a4c657aa30b`. Python 3.12 matches ADR 001, the exact patch improves repeatability, slim Bookworm minimizes the runtime while retaining a stable Debian base, and the index supports native AMD64 and ARM64 builds. The disposable builder obtains uv 0.11.32 from the official `ghcr.io/astral-sh/uv` image pinned to multi-platform index digest `sha256:df4cae8f3a96d175e2e5f992e597550000edbe78fdc2594d5cd8de1a217f504c`, matching the CI tool version without adding a project dependency or retaining uv in the runtime image.
+- Dependency behavior: `uv sync --locked --no-dev --no-install-project --no-cache` used the committed lock file, prohibited Python downloads, and installed only `asgiref==3.12.1`, `django==5.2.16`, and `sqlparse==0.5.5` into the builder virtual environment. The final stage copies only that virtual environment; uv, uvx, and the uv cache are absent from the runtime image.
+- Assumptions made: Django's built-in development server is the minimal approved local default until M1-T2 introduces startup coordination; production serving is an explicit M1 non-goal. UID and GID 10001 are unprivileged and do not conflict with a requirement elsewhere in the repository.
+- Human decisions: the human limited implementation to M1-T1 and explicitly prohibited M1-T2 and every other roadmap task.
+- Independent review findings: the initial image satisfied the explicit build and non-root criteria but retained approximately 41 MiB of uv cache and 53 MiB of uv/uvx build tooling. The reviewer required a disposable builder stage so the runtime image would satisfy the cache-exclusion implementation note; the correction and focused verification removed the finding.
+- Commands run: initial Git status and history inspection; repository file searches; planning and ADR review; `docker buildx imagetools inspect python:3.12.13-slim-bookworm`; `docker buildx imagetools inspect ghcr.io/astral-sh/uv:0.11.32`; two no-cache `docker build --pull --no-cache --tag appointment-booking-system:m1-t1 .` executions; `docker build --check .`; image metadata inspection; runtime absence checks for `/root/.cache/uv`, `/bin/uv`, and `/bin/uvx`; `docker run --rm --entrypoint /usr/bin/id appointment-booking-system:m1-t1 -u`; in-image `manage.py check`; two detached default-process smoke runs; `docker exec appointment-booking-m1-t1-smoke /usr/bin/id -u`; `docker top appointment-booking-m1-t1-smoke -eo user,pid,args`; `curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:18000/health/live`; container log inspection and removal; two final repository command passes with `uv sync`, `uv run ruff check .`, `uv run ruff format --check .`, `uv run pytest`, and `uv run python manage.py check`. `docker compose build`: `N/A — command is introduced by a later roadmap task: M1-T2 adds the Compose configuration`; `docker compose up -d postgres`: `N/A — command is introduced by a later roadmap task: M1-T2 adds the PostgreSQL service`; `docker compose up --build`: `N/A — command is introduced by a later roadmap task: M1-T2 adds the Compose configuration and coordinated services`.
+- Command results: the initial no-cache build produced Linux ARM64 image `sha256:65cf1e85521ccc47e357c6bb9e8bc132556c5fdb4a4f1cd60f52c9b530a54ce0`, size 259,589,502 bytes. After the builder-stage correction, the no-cache rebuild produced image `sha256:fc925636db293ce058f8727c12b602915ee2b3e0e80e7276c5417460d6492aed`, size 180,829,376 bytes; runtime absence checks confirmed that uv, uvx, and `/root/.cache/uv` were not present. Dockerfile static build checks completed with no warnings. Final image metadata declared user `10001:10001` and the expected Django command; standalone and running-container UID checks both returned `10001`; Docker process metadata showed both default runserver processes under user 10001; the in-image Django check passed; the default process served `/health/live` with `200` and `{"status": "ok"}`. The final `uv sync` resolved 13 packages and checked 10 installed packages; Ruff lint passed; Ruff formatting reported 27 files already formatted; all 6 tests passed; the host Django check reported no issues. Both smoke containers were removed. Compose commands were unavailable and were not run or reported as passing.
+- Failures encountered: the first image metadata template referenced the absent optional `Config.Entrypoint` map key and failed with a template parsing error; the image and runtime were unaffected. Independent review then found build-only cache and tooling retained in the initial runtime image.
+- Retries and recovery attempts: metadata inspection was rerun using fields guaranteed to exist and succeeded. The Dockerfile was changed to use a no-cache builder and fresh runtime stage; the image was rebuilt and every focused and repository check was rerun successfully.
+- Human intervention: none beyond the task scope supplied in the invocation.
+- Manual code changes: none.
+- Defects discovered: the initial single-runtime-stage image retained uv cache and tooling; the final builder/runtime split removes both.
+- Architectural changes after implementation began: none; this task implements the approved Docker packaging boundary without adding product, persistence, PostgreSQL, or Compose behavior.
+- Deviations from the roadmap: none.
+- Remaining risks: only the host-native ARM64 image was executed locally, although both base references are pinned multi-platform indexes; byte-for-byte equality across repeated builds was not measured; the default command is intentionally a development server; Compose startup, stable development configuration, PostgreSQL, migrations, and readiness remain deferred to M1-T2 and M1-T3.
+- Completion decision: accepted after the clean image build, non-root metadata and runtime checks, in-container Django check, default-process HTTP smoke test, and all five required repository commands passed.
 
 ## Approved Architectural Choices
 
