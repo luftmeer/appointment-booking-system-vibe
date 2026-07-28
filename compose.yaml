@@ -1,0 +1,63 @@
+name: appointment-booking-system
+
+services:
+  postgres:
+    image: postgres:16.13-bookworm@sha256:472efd9a66f2b2f1a5aeb18b28de74332e6ef88c2b93a1a5d812fb6db67a5f60
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-appointment_booking_development}
+      POSTGRES_USER: ${DATABASE_USER:-appointment_booking_development}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-development-only-appointment-booking-database-password}
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --auth-local=scram-sha-256
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready --username \"$${POSTGRES_USER}\" --dbname \"$${POSTGRES_DB}\""]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+      start_period: 5s
+    ports:
+      - name: postgres
+        target: 5432
+        published: "${DATABASE_PORT:-5432}"
+        host_ip: 127.0.0.1
+        protocol: tcp
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  web:
+    build:
+      context: .
+    environment:
+      DJANGO_ENVIRONMENT: development
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-development-only-appointment-booking-secret}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-true}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      DATABASE_NAME: ${DATABASE_NAME:-appointment_booking_development}
+      DATABASE_USER: ${DATABASE_USER:-appointment_booking_development}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-development-only-appointment-booking-database-password}
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+      DATABASE_CONNECT_TIMEOUT: ${DATABASE_CONNECT_TIMEOUT:-2}
+      DATABASE_STARTUP_MAX_ATTEMPTS: ${DATABASE_STARTUP_MAX_ATTEMPTS:-10}
+      DATABASE_STARTUP_RETRY_DELAY: ${DATABASE_STARTUP_RETRY_DELAY:-1}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - /app/.venv/bin/python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live', timeout=2)
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    ports:
+      - name: web
+        target: 8000
+        published: "${WEB_HOST_PORT:-8000}"
+        host_ip: 127.0.0.1
+        protocol: tcp
+
+volumes:
+  postgres_data:

@@ -14,7 +14,8 @@ RUN uv sync --locked --no-dev --no-install-project --no-cache
 
 FROM python:3.12.13-slim-bookworm@sha256:d50fb7611f86d04a3b0471b46d7557818d88983fc3136726336b2a4c657aa30b
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
+ENV DJANGO_SETTINGS_MODULE=config.settings \
+    PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 WORKDIR /app
@@ -28,9 +29,11 @@ RUN groupadd --gid 10001 app \
 COPY --chown=app:app manage.py ./
 COPY --chown=app:app config ./config
 COPY --chown=app:app apps ./apps
+COPY --chmod=755 docker/entrypoint.sh /usr/local/bin/entrypoint
 
 USER 10001:10001
 
 EXPOSE 8000
 
-CMD ["/app/.venv/bin/python", "manage.py", "runserver", "0.0.0.0:8000"]
+ENTRYPOINT ["/usr/local/bin/entrypoint"]
+CMD ["/app/.venv/bin/python", "manage.py", "runserver", "0.0.0.0:8000", "--noreload"]
