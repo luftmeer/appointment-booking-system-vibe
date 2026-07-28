@@ -35,6 +35,14 @@ docker compose up -d postgres
 uv run pytest
 ```
 
+When an ignored `.env` overrides the published port or development placeholders,
+the equivalent host test command explicitly loads the same file:
+
+```bash
+docker compose up -d postgres
+uv run --env-file .env pytest
+```
+
 - Host processes use `DATABASE_HOST=127.0.0.1` and a configurable loopback-published development port.
 - Container processes use `DATABASE_HOST=postgres` and PostgreSQL's container port.
 - Compose publishes PostgreSQL only on `127.0.0.1`, never on all host interfaces.

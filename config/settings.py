@@ -1,4 +1,5 @@
 import os
+from ipaddress import ip_address
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
@@ -11,6 +12,19 @@ _DEVELOPMENT_DEFAULTS = {
     "DATABASE_USER": "appointment_booking_development",
     "DATABASE_PASSWORD": "development-only-appointment-booking-database-password",
 }
+
+
+def _is_loopback_host(host: str) -> bool:
+    normalized = host.strip().lower().rstrip(".")
+    if normalized.startswith("[") and normalized.endswith("]"):
+        normalized = normalized[1:-1]
+    if normalized == "localhost" or normalized.endswith(".localhost"):
+        return True
+    try:
+        return ip_address(normalized).is_loopback
+    except ValueError:
+        return False
+
 
 ENVIRONMENT = os.environ.get("DJANGO_ENVIRONMENT", "development").lower()
 if ENVIRONMENT not in {"development", "production"}:
@@ -74,15 +88,18 @@ if ENVIRONMENT == "production":
     invalid_settings = {
         name for name in required_settings if not os.environ.get(name, "").strip()
     }
+    effective_settings = {
+        "DJANGO_SECRET_KEY": SECRET_KEY,
+        "DATABASE_NAME": DATABASES["default"]["NAME"],
+        "DATABASE_USER": DATABASES["default"]["USER"],
+        "DATABASE_PASSWORD": DATABASES["default"]["PASSWORD"],
+    }
     invalid_settings.update(
         name
         for name, development_value in _DEVELOPMENT_DEFAULTS.items()
-        if os.environ.get(name) == development_value
+        if effective_settings[name] == development_value
     )
-    if not os.environ.get("DJANGO_ALLOWED_HOSTS") or set(ALLOWED_HOSTS) <= {
-        "localhost",
-        "127.0.0.1",
-    }:
+    if not ALLOWED_HOSTS or all(_is_loopback_host(host) for host in ALLOWED_HOSTS):
         invalid_settings.add("DJANGO_ALLOWED_HOSTS")
     if DEBUG:
         invalid_settings.add("DJANGO_DEBUG")

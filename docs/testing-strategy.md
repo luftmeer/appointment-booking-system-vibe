@@ -73,6 +73,13 @@ docker compose up -d postgres
 uv run pytest
 ```
 
+When an ignored `.env` supplies local overrides, host tests load it explicitly:
+
+```bash
+docker compose up -d postgres
+uv run --env-file .env pytest
+```
+
 - Host tests connect with `DATABASE_HOST=127.0.0.1` through a loopback-only published port.
 - Commands executed in a Compose container connect with `DATABASE_HOST=postgres`.
 - Host, container, and CI choose connection values through environment variables documented in `.env.example`.

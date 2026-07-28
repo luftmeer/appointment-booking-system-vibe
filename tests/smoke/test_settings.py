@@ -68,6 +68,39 @@ def test_development_database_port_is_environment_selected() -> None:
     assert result.stdout.strip() == "55432"
 
 
+def test_uv_env_file_selects_the_host_database_port(tmp_path: Path) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text("DATABASE_PORT=55432\n")
+    environment = {
+        name: value
+        for name, value in os.environ.items()
+        if not name.startswith(("DATABASE_", "DJANGO_", "PG"))
+        and name not in {"UV_ENV_FILE", "UV_NO_ENV_FILE"}
+    }
+    environment["PYTHONPATH"] = str(PROJECT_ROOT)
+
+    result = subprocess.run(
+        [
+            "uv",
+            "run",
+            "--no-sync",
+            "--env-file",
+            str(env_file),
+            "python",
+            "-c",
+            "import config.settings as s; print(s.DATABASES['default']['PORT'])",
+        ],
+        cwd=PROJECT_ROOT,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert result.stdout.strip() == "55432"
+
+
 def test_production_settings_accept_external_values() -> None:
     result = import_settings(VALID_PRODUCTION_ENV)
 
@@ -117,6 +150,46 @@ def test_production_settings_reject_development_values(
 
     assert result.returncode != 0
     assert name in result.stderr
+
+
+def test_production_settings_reject_normalized_development_database_name() -> None:
+    result = import_settings(
+        {**VALID_PRODUCTION_ENV, "DATABASE_NAME": " appointment_booking_development "}
+    )
+
+    assert result.returncode != 0
+    assert "DATABASE_NAME" in result.stderr
+
+
+@pytest.mark.parametrize(
+    "allowed_hosts",
+    [
+        "::1",
+        "[::1]",
+        "localhost,127.0.0.1,[::1]",
+        "service.localhost",
+    ],
+)
+def test_production_settings_reject_local_only_allowed_hosts(
+    allowed_hosts: str,
+) -> None:
+    result = import_settings(
+        {**VALID_PRODUCTION_ENV, "DJANGO_ALLOWED_HOSTS": allowed_hosts}
+    )
+
+    assert result.returncode != 0
+    assert "DJANGO_ALLOWED_HOSTS" in result.stderr
+
+
+def test_production_settings_allow_external_and_loopback_hosts() -> None:
+    result = import_settings(
+        {
+            **VALID_PRODUCTION_ENV,
+            "DJANGO_ALLOWED_HOSTS": "appointments.example.test,[::1]",
+        }
+    )
+
+    assert result.returncode == 0
 
 
 def test_settings_reject_unknown_environment() -> None:

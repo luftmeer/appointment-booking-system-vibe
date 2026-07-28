@@ -2,8 +2,8 @@
 set -eu
 
 attempt=1
-max_attempts="${DATABASE_STARTUP_MAX_ATTEMPTS:-10}"
-retry_delay="${DATABASE_STARTUP_RETRY_DELAY:-1}"
+max_attempts="${DATABASE_STARTUP_MAX_ATTEMPTS-10}"
+retry_delay="${DATABASE_STARTUP_RETRY_DELAY-1}"
 
 case "$max_attempts" in
     [1-9] | [1-9][0-9] | [1-9][0-9][0-9] | 1000) ;;
@@ -21,7 +21,7 @@ case "$retry_delay" in
         ;;
 esac
 
-until /app/.venv/bin/python -c 'import django; django.setup(); from django.db import connection; connection.ensure_connection(); connection.close()'
+until python -c 'import django; django.setup(); from django.db import connection; connection.ensure_connection(); connection.close()'
 do
     if [ "$attempt" -ge "$max_attempts" ]; then
         echo "PostgreSQL did not become available after $max_attempts attempts" >&2
@@ -33,6 +33,6 @@ do
     sleep "$retry_delay"
 done
 
-/app/.venv/bin/python manage.py migrate --noinput
+python manage.py migrate --noinput
 
 exec "$@"
