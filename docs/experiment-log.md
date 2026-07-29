@@ -9,7 +9,7 @@ Record the planning and implementation process without inventing dates, outcomes
 - Phase: M1 Docker and PostgreSQL development environment implementation.
 - Application code created: minimal Django configuration plus the M0-T3 common application and database-independent liveness endpoint.
 - Dependencies installed: Django, Psycopg with its binary package, Ruff, pytest, and pytest-django from `uv.lock`.
-- CI created: M0-T4 baseline GitHub Actions workflow for locked Python installation, Django checks, Ruff, and pytest; an uncommitted M1-T2 correction adds the PostgreSQL prerequisite for the now database-backed complete suite.
+- CI created: M0-T4 baseline plus the M1-T2 PostgreSQL service prerequisite; the locked Django, Ruff, and complete 66-test pipeline is green for commit `e6e7511`.
 - Container image created: M1-T1 reproducible non-root Django web image.
 - Development stack created: M1-T2 password-authenticated PostgreSQL and migration-gated Django Compose services.
 - Database migrations created: none.
@@ -356,6 +356,21 @@ At completion, report:
 - Remaining verification: obtain independent review and request human verification of the uncommitted diff. Hosted clean-checkout success remains unavailable until the human later authorizes a follow-up commit and push.
 - Completion decision: blocked pending human verification of the uncommitted diff, an explicitly authorized commit/push, and a green hosted run for that exact commit.
 
+#### M1-T2 Hosted CI Completion Addendum
+
+- Date and time: `2026-07-29`; exact documentation time unknown.
+- Human confirmation and decision: the human explicitly confirmed authorizing or performing commit `e6e7511aaf7c1efe0b4a9e9a89c41d6e05877f36` and its push to `main`, directed that it be retained, and requested this hosted-completion addendum without a commit.
+- Commit evidence: local `HEAD`, `main`, `origin/main`, and `origin/HEAD` all resolve to signed commit `e6e7511aaf7c1efe0b4a9e9a89c41d6e05877f36`, subject `M1-T2: Add PostgreSQL-backed CI verification`, parent `fba930028d9cf1f57b3f733d160dcea0b5be0a01`. Its delta contains exactly `.github/workflows/ci.yml`, `tests/integration/test_compose_runtime.py`, and `docs/experiment-log.md`, with 173 insertions and two deletions.
+- Hosted run evidence: push-triggered GitHub Actions run [`30439391867`](https://github.com/luftmeer/appointment-booking-system-vibe/actions/runs/30439391867) completed successfully for exact commit `e6e7511aaf7c1efe0b4a9e9a89c41d6e05877f36` in 1 minute 50 seconds.
+- Hosted job evidence: Python job [`90534762150`](https://github.com/luftmeer/appointment-booking-system-vibe/actions/runs/30439391867/job/90534762150) completed successfully on `ubuntu-24.04` in 1 minute 44 seconds. PostgreSQL service initialization, checkout, locked dependency installation, Django checks, Ruff lint, Ruff formatting, the unchanged complete pytest command, and cleanup all succeeded.
+- Blocker resolution: the successful exact-commit hosted run resolves the PostgreSQL CI sequencing and clean-checkout blockers recorded above. It proves the pinned service image and health configuration, dedicated test-database creation, runner Docker/Compose coexistence, and the complete unfiltered pipeline within the 20-minute bound.
+- Files changed by this addendum: `docs/experiment-log.md` only.
+- Tests added, changed, or removed: none; this is a provenance and hosted-evidence update.
+- Commands run: `git status --short --branch`; `git log --oneline --decorate -5`; signed commit/stat inspection for `e6e7511`; `git remote -v`; public GitHub run and job inspection; experiment-log inspection; final documentation and diff checks.
+- Local verification: canonical PostgreSQL startup reached healthy; `uv sync` passed; Ruff lint passed; formatting reported 32 files already formatted; Django and migration checks passed; all 66 tests passed in 56.55 seconds; shell syntax, Compose rendering, lock, and `git diff --check` passed.
+- Remaining risks: hosted HBA and password-encryption internals were configured but not queried directly in GitHub Actions; local CI-equivalent evidence reported SCRAM and zero trust rules. Runtime Compose tests still depend on Docker/Compose behavior and dynamic host-port reservation. Database readiness remains correctly deferred to M1-T3; the web process remains a local development server.
+- Completion decision: M1-T2 and its PostgreSQL-backed CI correction are accepted after the successful hosted run for exact commit `e6e7511`. This documentation-only addendum remains uncommitted pending human verification.
+
 ## Approved Architectural Choices
 
 - Integrated Django modular monolith.
@@ -386,6 +401,7 @@ At completion, report:
 - Manually added the five OpenCode tooling files included in commit `41687345b049e95beeed401a1ed38e985afb7cee` and later explicitly accepted them as repository state.
 - Created and pushed M0-T4 commit `3bfde5f7c0ea4ff263769330cadb5239e5b2cae8`, enabling successful hosted CI run `30304622905`.
 - Confirmed authorizing M1-T2 correction commit `fba930028d9cf1f57b3f733d160dcea0b5be0a01` and its push to `main`, then authorized the narrowly scoped PostgreSQL CI prerequisite correction while keeping M1-T3 readiness out of scope.
+- Confirmed authorizing or performing PostgreSQL CI correction commit `e6e7511aaf7c1efe0b4a9e9a89c41d6e05877f36` and its push, directed that it be retained, and requested its hosted-completion evidence be documented without committing.
 
 ## Manual Code Changes
 
