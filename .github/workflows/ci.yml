@@ -11,7 +11,38 @@ jobs:
   python:
     name: Python
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 20
+
+    # Public CI-only placeholders. They are not production or reusable credentials.
+    env:
+      DJANGO_ENVIRONMENT: development
+      DJANGO_SECRET_KEY: ci-only-appointment-booking-secret
+      DJANGO_DEBUG: "false"
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+      DATABASE_NAME: appointment_booking_ci
+      DATABASE_TEST_NAME: appointment_booking_test
+      DATABASE_USER: appointment_booking_ci
+      DATABASE_PASSWORD: ci-only-appointment-booking-database-password
+      DATABASE_HOST: 127.0.0.1
+      DATABASE_PORT: "5432"
+      DATABASE_CONNECT_TIMEOUT: "2"
+
+    services:
+      postgres:
+        image: postgres:16.13-bookworm@sha256:472efd9a66f2b2f1a5aeb18b28de74332e6ef88c2b93a1a5d812fb6db67a5f60
+        env:
+          POSTGRES_DB: appointment_booking_ci
+          POSTGRES_USER: appointment_booking_ci
+          POSTGRES_PASSWORD: ci-only-appointment-booking-database-password
+          POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --auth-local=scram-sha-256
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready --username appointment_booking_ci --dbname appointment_booking_ci"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 15
+          --health-start-period 5s
 
     steps:
       - name: Check out repository

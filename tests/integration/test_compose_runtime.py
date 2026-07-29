@@ -32,6 +32,8 @@ CONFIGURATION_VARIABLES = {
     "DJANGO_ENVIRONMENT",
     "DJANGO_SECRET_KEY",
     "DJANGO_SETTINGS_MODULE",
+    "UV_ENV_FILE",
+    "UV_NO_ENV_FILE",
     "WEB_HOST_PORT",
 }
 
@@ -275,6 +277,125 @@ def cleanup_project(
             original_exception.add_note(message)
         else:
             raise AssertionError(message)
+
+
+def test_isolated_environment_removes_ambient_controls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ambient_controls = {
+        "COMPOSE_FILE": "alternate.yaml",
+        "DATABASE_PORT": "6543",
+        "DJANGO_SETTINGS_MODULE": "alternate.settings",
+        "PGOPTIONS": "-c default_transaction_read_only=on",
+        "UV_ENV_FILE": "alternate.env",
+        "UV_NO_ENV_FILE": "1",
+    }
+    for name, value in ambient_controls.items():
+        monkeypatch.setenv(name, value)
+
+    environment = isolated_environment()
+
+    assert ambient_controls.keys().isdisjoint(environment)
+    assert environment["PATH"] == os.environ["PATH"]
+
+
+def test_cleanup_project_uses_only_scoped_fallback_resources(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = sys.modules[__name__]
+    project_name = "appointment-booking-m1-t2-cleanup-test"
+    identifiers = {
+        "containers": "container-id",
+        "volumes": "volume-id",
+        "networks": "network-id",
+        "images": "image-id",
+    }
+    query_counts = dict.fromkeys(identifiers, 0)
+    fallback_commands: list[list[str]] = []
+
+    def failed_compose_command(
+        *args: object, **kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(
+            args=[],
+            returncode=1,
+            stdout="",
+            stderr="simulated compose failure",
+        )
+
+    def recorded_run_command(
+        command: list[str],
+        environment: dict[str, str],
+        timeout: int = 240,
+        check: bool = True,
+    ) -> subprocess.CompletedProcess[str]:
+        if "--filter" in command:
+            resource_type = {
+                "ps": "containers",
+                "volume": "volumes",
+                "network": "networks",
+                "image": "images",
+            }[command[1]]
+            assert command[-1] == f"label=com.docker.compose.project={project_name}"
+            query_counts[resource_type] += 1
+            stdout = (
+                f"{identifiers[resource_type]}\n"
+                if query_counts[resource_type] == 1
+                else ""
+            )
+            return subprocess.CompletedProcess(command, 0, stdout, "")
+
+        fallback_commands.append(command)
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(module, "compose_command", failed_compose_command)
+    monkeypatch.setattr(module, "run_command", recorded_run_command)
+
+    with pytest.raises(AssertionError, match="simulated compose failure"):
+        cleanup_project(project_name, {}, tmp_path / ".env")
+
+    assert query_counts == dict.fromkeys(identifiers, 2)
+    assert fallback_commands == [
+        ["docker", "container", "rm", "--force", "container-id"],
+        ["docker", "network", "rm", "network-id"],
+        ["docker", "volume", "rm", "--force", "volume-id"],
+        ["docker", "image", "rm", "--force", "image-id"],
+    ]
+
+
+def test_cleanup_project_preserves_body_exception_when_compose_times_out(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = sys.modules[__name__]
+
+    def timed_out_compose_command(*args: object, **kwargs: object) -> None:
+        raise subprocess.TimeoutExpired(cmd=["docker", "compose", "down"], timeout=60)
+
+    monkeypatch.setattr(module, "compose_command", timed_out_compose_command)
+    monkeypatch.setattr(
+        module,
+        "project_resources",
+        lambda project_name, environment: {
+            "containers": [],
+            "volumes": [],
+            "networks": [],
+            "images": [],
+        },
+    )
+
+    with pytest.raises(RuntimeError, match="simulated body failure") as body_error:
+        try:
+            raise RuntimeError("simulated body failure")
+        finally:
+            cleanup_project(
+                "appointment-booking-m1-t2-timeout-test", {}, tmp_path / ".env"
+            )
+
+    assert any(
+        "docker compose down raised" in note for note in body_error.value.__notes__
+    )
 
 
 def test_fresh_compose_stack_authenticates_migrates_and_survives_restart(

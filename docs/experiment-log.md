@@ -9,7 +9,7 @@ Record the planning and implementation process without inventing dates, outcomes
 - Phase: M1 Docker and PostgreSQL development environment implementation.
 - Application code created: minimal Django configuration plus the M0-T3 common application and database-independent liveness endpoint.
 - Dependencies installed: Django, Psycopg with its binary package, Ruff, pytest, and pytest-django from `uv.lock`.
-- CI created: M0-T4 baseline GitHub Actions workflow for locked Python installation, Django checks, Ruff, and pytest.
+- CI created: M0-T4 baseline GitHub Actions workflow for locked Python installation, Django checks, Ruff, and pytest; an uncommitted M1-T2 correction adds the PostgreSQL prerequisite for the now database-backed complete suite.
 - Container image created: M1-T1 reproducible non-root Django web image.
 - Development stack created: M1-T2 password-authenticated PostgreSQL and migration-gated Django Compose services.
 - Database migrations created: none.
@@ -339,6 +339,23 @@ At completion, report:
 - Remaining risks: runtime Compose tests require Docker and a sufficiently recent Compose plugin; dynamic host-port reservation has a small bind race; the maximum startup controls permit a long but finite wait; the local web process remains Django's development server; database readiness and PostgreSQL CI remain deferred to M1-T3 and M1-T4.
 - Completion decision: implementation corrections and behavioral evidence are complete, but no correction commit will be created until the human verifies the uncommitted diff and explicitly authorizes the next action.
 
+#### M1-T2 CI Completion Correction Addendum
+
+- Date and time: `2026-07-29`; exact time unknown.
+- Trigger: after the post-commit correction was published, an independent review reconciled the repository with the earlier uncommitted evidence and found the exact pushed commit's hosted workflow red because the complete suite had become PostgreSQL-backed before CI supplied PostgreSQL.
+- Human authorization and provenance: the human explicitly confirmed authorizing commit `fba930028d9cf1f57b3f733d160dcea0b5be0a01` and its push to `main`. The human then authorized a roadmap correction adding the PostgreSQL service and CI environment required to run the complete M1-T2 suite without weakening or skipping database/runtime tests, explicitly excluding M1-T3 readiness work. No follow-up commit or push is authorized yet.
+- Hosted failure evidence: push run [`30372466131`](https://github.com/luftmeer/appointment-booking-system-vibe/actions/runs/30372466131), Python job `90319594663`, ran exact commit `fba930028d9cf1f57b3f733d160dcea0b5be0a01` and failed in `Test Python` with exit code 1 after 1 minute 33 seconds. Public unauthenticated access exposed the failed step but not detailed logs; the workflow itself had no PostgreSQL service or database environment despite collecting the PostgreSQL-backed suite.
+- Review findings addressed: the runtime host query still inherited uv env-file selectors, and fallback cleanup/original-exception behavior was implemented but not directly exercised. The runtime environment now removes `UV_ENV_FILE` and `UV_NO_ENV_FILE`; pure harness tests inject hostile ambient controls, nonzero Compose cleanup, all four project resource classes, scoped fallback success, post-cleanup rechecks, Compose timeout, and original body-exception preservation.
+- Files changed: `.github/workflows/ci.yml`, `tests/integration/test_compose_runtime.py`, and `docs/experiment-log.md`.
+- Tests added or changed: added three non-Docker harness tests for ambient-control removal, resource-scoped fallback cleanup, and timeout diagnostics preserving the original body failure. The complete inventory increases from 63 to 66 tests; no existing test is skipped, filtered, or weakened.
+- Workflow correction: the existing Python job now supplies the immutable PostgreSQL 16.13 Bookworm image already approved for Compose, CI-only public database placeholders, SCRAM host/local initialization, loopback host settings, a dedicated Django test database, and Docker health gating. The complete `uv run pytest` command remains unchanged. The timeout increases from 10 to 20 minutes because the suite now includes two real Docker Compose lifecycle tests.
+- Scope: this correction supplies only the prerequisite needed by the existing M1-T2 database/runtime tests. It does not add `/health/ready`, a persistence health interface, readiness tests, domain behavior, or other M1-T3 implementation.
+- Commands run: repository status/history/commit inspection; workflow, runtime test, database test, and experiment-log inspection; public GitHub run inspection; attempted `gh run view 30372466131 --log-failed`; focused cleanup/environment pytest; focused and complete Ruff checks and formatting; `act --strict --validate`; `act --strict --list`; `act push --strict --dryrun` for the Python job; isolated CI-project resource preflight; fresh CI-equivalent `docker compose up -d --wait postgres`; `uv sync`; complete pytest and Django/migration checks under the exact CI job environment; shell syntax, Compose rendering, Dockerfile, lock, and diff checks; CI PostgreSQL status, loopback, database, SCRAM, and HBA inspection; isolated CI-project cleanup.
+- Command results: worktree began clean with local and remote `main` at authorized commit `fba9300`; three focused harness tests passed; strict workflow validation passed; listing reported one Python job for push and pull-request events. A fresh isolated PostgreSQL volume initialized with the CI identity and became healthy on `127.0.0.1:5432`; the unchanged complete suite passed all 66 tests in 57.45 seconds under the exact CI environment. `uv sync`, Ruff lint, formatting for 32 files, Django and migration checks, shell syntax, Compose rendering, Dockerfile static checks, lock checks, and `git diff --check` passed. PostgreSQL reported database `appointment_booking_ci`, `scram-sha-256` password encryption, and zero trust HBA rules. The isolated containers, network, and volume were removed.
+- Failures encountered: `gh` was unavailable, and public unauthenticated GitHub access did not expose detailed failed-job logs. `act` dry-run rendered the pinned PostgreSQL service and job container but `act 0.2.89` panicked in `containerReference.GetHealth` while querying a nonexistent dry-run service container, so it did not complete workflow dry-run validation. The first read-only CI database metadata probe omitted `DJANGO_SETTINGS_MODULE` and failed before connecting; the corrected probe used `config.settings` and returned the expected database, SCRAM setting, and zero trust count.
+- Remaining verification: obtain independent review and request human verification of the uncommitted diff. Hosted clean-checkout success remains unavailable until the human later authorizes a follow-up commit and push.
+- Completion decision: blocked pending human verification of the uncommitted diff, an explicitly authorized commit/push, and a green hosted run for that exact commit.
+
 ## Approved Architectural Choices
 
 - Integrated Django modular monolith.
@@ -368,6 +385,7 @@ At completion, report:
 - Required a stable Django development secret across container restarts rather than per-restart generation.
 - Manually added the five OpenCode tooling files included in commit `41687345b049e95beeed401a1ed38e985afb7cee` and later explicitly accepted them as repository state.
 - Created and pushed M0-T4 commit `3bfde5f7c0ea4ff263769330cadb5239e5b2cae8`, enabling successful hosted CI run `30304622905`.
+- Confirmed authorizing M1-T2 correction commit `fba930028d9cf1f57b3f733d160dcea0b5be0a01` and its push to `main`, then authorized the narrowly scoped PostgreSQL CI prerequisite correction while keeping M1-T3 readiness out of scope.
 
 ## Manual Code Changes
 
@@ -391,6 +409,7 @@ At completion, report:
 - Database readiness did not explicitly preserve the persistence boundary.
 - M0 task entries initially omitted the human provenance of the OpenCode tooling committed in `41687345b049e95beeed401a1ed38e985afb7cee`; the M0 traceability correction records it.
 - M0-T4 initially lacked a hosted clean-checkout run and remained blocked until the human pushed commit `3bfde5f7c0ea4ff263769330cadb5239e5b2cae8` and GitHub Actions run `30304622905` passed.
+- M1-T2 correction commit `fba930028d9cf1f57b3f733d160dcea0b5be0a01` initially failed hosted run `30372466131` because the complete suite required PostgreSQL before the workflow supplied its approved PostgreSQL prerequisite.
 
 ## Architectural Changes Made After Implementation Began
 
